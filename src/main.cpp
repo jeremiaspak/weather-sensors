@@ -2,11 +2,15 @@
 #include <RCSwitch.h>
 #include <Wire.h>
 #include <Adafruit_BMP085.h>
+#include <Adafruit_Sensor.h>
+#include <DHT.h>
+#include <DHT_U.h>
 
 uint32_t delayBetweenMeasurements;
 const String TEMPERATURE_ID = "99";
 const String PRESSURE_ID = "98";
 const String ALTITUDE_ID = "97";
+const String HUMIDITY_ID = "96";
 String transformData(float data);
 void publish(String data);
 
@@ -24,6 +28,15 @@ void logBMPTemperature();
 void logBMPPressure();
 void logBMPAltitude();
 
+// --------------------- DHT Sensor ---------------------
+
+#define DHT_PIN 7
+#define DHT_TYPE DHT11
+DHT_Unified dht(DHT_PIN, DHT_TYPE);
+void setupDHTSensor();
+void logDHTHumidity();
+void logDHTTemperature();
+
 // ----------------------- Setup ------------------------
 
 void setup() {
@@ -32,6 +45,7 @@ void setup() {
 
   setupRF();
   setupBMPSensor();
+  setupDHTSensor();
 
   delayBetweenMeasurements = 10000;
 }
@@ -44,6 +58,7 @@ void loop() {
   logBMPTemperature();
   logBMPPressure();
   logBMPAltitude();
+  logDHTHumidity();
 
   digitalWrite(LED_BUILTIN, LOW);
   delay(delayBetweenMeasurements);
@@ -110,4 +125,63 @@ void logBMPAltitude() {
   // that is equal to 101500 Pascals.
   // altitude = bmp.readAltitude(101500);
   // Serial.println("Real altitude = " + String(altitude) + " meters");
+}
+
+// -----------------------------------------------------
+//                     DHT Sensor
+// -----------------------------------------------------
+
+void setupDHTSensor() {
+  dht.begin();
+  sensor_t sensor;
+
+  Serial.println(F("------------------------------------"));
+  Serial.println(F("DHT Sensor"));
+  Serial.println();
+
+  dht.temperature().getSensor(&sensor);
+  Serial.println(F("Temperature Sensor"));
+  Serial.print(F("Sensor Type: ")); Serial.println(sensor.name);
+  Serial.print(F("Driver Ver:  ")); Serial.println(sensor.version);
+  Serial.print(F("Unique ID:   ")); Serial.println(sensor.sensor_id);
+  Serial.print(F("Max Value:   ")); Serial.print(sensor.max_value); Serial.println(F("°C"));
+  Serial.print(F("Min Value:   ")); Serial.print(sensor.min_value); Serial.println(F("°C"));
+  Serial.print(F("Resolution:  ")); Serial.print(sensor.resolution); Serial.println(F("°C"));
+  Serial.println();
+
+  dht.humidity().getSensor(&sensor);
+  Serial.println(F("Humidity Sensor"));
+  Serial.print(F("Sensor Type: ")); Serial.println(sensor.name);
+  Serial.print(F("Driver Ver:  ")); Serial.println(sensor.version);
+  Serial.print(F("Unique ID:   ")); Serial.println(sensor.sensor_id);
+  Serial.print(F("Max Value:   ")); Serial.print(sensor.max_value); Serial.println(F("%"));
+  Serial.print(F("Min Value:   ")); Serial.print(sensor.min_value); Serial.println(F("%"));
+  Serial.print(F("Resolution:  ")); Serial.print(sensor.resolution); Serial.println(F("%"));
+  Serial.println(F("------------------------------------"));
+}
+
+void logDHTTemperature() {
+  sensors_event_t event;
+  dht.temperature().getEvent(&event);
+
+  if (isnan(event.temperature)) {
+    Serial.println(F("Error reading temperature!"));
+  }
+  else {
+    Serial.println("Temperature = " + String(event.temperature) + " °C");
+    publish(transformData(TEMPERATURE_ID, event.temperature));
+  }
+}
+
+void logDHTHumidity() {
+  sensors_event_t event;
+  dht.humidity().getEvent(&event);
+
+  if (isnan(event.relative_humidity)) {
+    Serial.println(F("Error reading humidity!"));
+  }
+  else {
+    Serial.println("Humidity = " + String(event.relative_humidity) + " %");
+    publish(transformData(HUMIDITY_ID, event.relative_humidity));
+  }
 }
