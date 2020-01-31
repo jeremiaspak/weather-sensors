@@ -11,6 +11,7 @@ const String TEMPERATURE_ID = "99";
 const String PRESSURE_ID = "98";
 const String ALTITUDE_ID = "97";
 const String HUMIDITY_ID = "96";
+const String MOISTURE_ID = "95";
 String transformData(float data);
 void publish(String data);
 
@@ -37,6 +38,12 @@ void setupDHTSensor();
 void logDHTHumidity();
 void logDHTTemperature();
 
+// --------------------- YL-69---------------------
+
+#define YL69_PIN A0
+void setupYL69();
+void logMoisture();
+
 // ----------------------- Setup ------------------------
 
 void setup() {
@@ -46,6 +53,7 @@ void setup() {
   setupRF();
   setupBMPSensor();
   setupDHTSensor();
+  setupYL69();
 
   delayBetweenMeasurements = 10000;
 }
@@ -57,8 +65,9 @@ void loop() {
 
   logBMPTemperature();
   logBMPPressure();
-  logBMPAltitude();
+  // // logBMPAltitude();
   logDHTHumidity();
+  logMoisture();
 
   digitalWrite(LED_BUILTIN, LOW);
   delay(delayBetweenMeasurements);
@@ -184,4 +193,18 @@ void logDHTHumidity() {
     Serial.println("Humidity = " + String(event.relative_humidity) + " %");
     publish(transformData(HUMIDITY_ID, event.relative_humidity));
   }
+}
+
+// -----------------------------------------------------
+//                         YL-69
+// -----------------------------------------------------
+
+void setupYL69() {
+  pinMode(YL69_PIN, INPUT);
+}
+
+void logMoisture() {
+  int moistureLevel = analogRead(YL69_PIN);
+  Serial.println("Moisture = " + String(moistureLevel) + " %");
+  publish(transformData(MOISTURE_ID, moistureLevel));
 }
